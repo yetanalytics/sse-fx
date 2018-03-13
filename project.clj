@@ -1,6 +1,6 @@
 (defproject com.yetanalytics/sse-fx "0.1.1-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+  :description "re-frame FX and CoFX for working with EventSource connections in the browser"
+  :url "https://github.com/yetanalytics/sse-fx"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0" :scope "provided"]
