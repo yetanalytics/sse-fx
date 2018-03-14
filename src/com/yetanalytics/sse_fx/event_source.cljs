@@ -64,11 +64,26 @@
              (event-source-error
               {:event-source es
                :event e
-               :context ::error}))))))
+               :context ::error}))))
+    es))
 
 (defonce event-sources
   ;; map of uri (or another key) to map wrapping event source object
   (atom {}))
+
+(defn close!
+  "Given an event source wrapper map, close it and run a callback if present"
+  [{es :event-source
+    ?on-close :on-close
+    :as es-map}]
+  (do
+    (.close es)
+    (when ?on-close
+      (?on-close))))
+
+;; Handler fns
+
+(declare close-fx)
 
 (defn init-fx
   "Fx handler to initialize an event source that talks back to re-frame.
@@ -88,37 +103,39 @@
            ;; any override args for event source
            event-source-args]
     :as arg-map}]
-  (let [key (or key uri)
-        es (new-event-source
-            (merge
-             (cond-> {:uri uri}
-               handle-open
-               (assoc
-                :on-open
-                #(re-frame/dispatch
-                  (conj handle-open
-                        key %)))
-               handle-message
-               (assoc
-                :on-message
-                #(re-frame/dispatch
-                  (conj handle-message
-                        key %)))
-               handle-error
-               (assoc
-                :on-error
-                #(re-frame/dispatch
-                  (conj handle-error
-                        key %))))
-             event-source-args))]
-    (swap! event-sources
-           assoc
-           key
-           (cond-> {:event-source es}
-             handle-close
-             (assoc :on-close #(re-frame/dispatch
-                                (conj handle-close
-                                      key es)))))))
+  (let [key (or key uri)]
+    ;; Close any open connections with this key
+    (close-fx {:keys [key]})
+    (let [es (new-event-source
+              (merge
+               (cond-> {:uri uri}
+                 handle-open
+                 (assoc
+                  :on-open
+                  #(re-frame/dispatch
+                    (conj handle-open
+                          key %)))
+                 handle-message
+                 (assoc
+                  :on-message
+                  #(re-frame/dispatch
+                    (conj handle-message
+                          key %)))
+                 handle-error
+                 (assoc
+                  :on-error
+                  #(re-frame/dispatch
+                    (conj handle-error
+                          key %))))
+               event-source-args))]
+      (swap! event-sources
+             assoc
+             key
+             (cond-> {:event-source es}
+               handle-close
+               (assoc :on-close #(re-frame/dispatch
+                                  (conj handle-close
+                                        key es))))))))
 
 (defn get-cofx
   "A cofx handler that gets all or a particular event source"
@@ -134,20 +151,12 @@
   (let [sources @event-sources]
     (if (= keys :all)
       (do (reset! event-sources {})
-          (doseq [{es :event-source
-                   ?on-close :on-close} (vals sources)]
-            (do
-              (.close es)
-              (when ?on-close
-                (?on-close)))))
+          (doseq [es-map (vals sources)]
+            (close! es-map)))
       (do (swap! event-sources dissoc keys)
-          (doseq [{es :event-source
-                   ?on-close :on-close} (vals
-                                         (select-keys sources keys))]
-            (do
-              (.close es)
-              (when ?on-close
-                (?on-close))))))
+          (doseq [es-map (vals
+                          (select-keys sources keys))]
+            (close! es-map))))
     (when handle-done
       (let [sources-after @event-sources]
         (re-frame/dispatch (conj handle-done
