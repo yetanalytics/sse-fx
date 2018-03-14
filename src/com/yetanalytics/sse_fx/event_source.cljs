@@ -138,10 +138,13 @@
                                         key es))))))))
 
 (defn get-cofx
-  "A cofx handler that gets all or a particular event source"
-  [cofx ?key]
-  (cond-> @event-sources
-    ?key (get ?key)))
+  "A cofx handler that gets all or a particular set of event sources"
+  [cofx keys]
+  (assoc cofx
+         :event-sources
+         (cond-> @event-sources
+           (not= :all
+                 keys) (select-keys keys))))
 
 (defn close-fx
   "An fx handler that shuts down one or all event sources.
