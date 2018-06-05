@@ -1,4 +1,4 @@
-(defproject com.yetanalytics/sse-fx "0.1.1-SNAPSHOT"
+(defproject com.yetanalytics/sse-fx "0.1.1"
   :description "re-frame FX and CoFX for working with EventSource connections in the browser"
   :url "https://github.com/yetanalytics/sse-fx"
   :license {:name "Eclipse Public License"
